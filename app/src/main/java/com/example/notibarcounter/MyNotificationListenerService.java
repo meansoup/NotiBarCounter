@@ -137,9 +137,16 @@ public class MyNotificationListenerService extends NotificationListenerService {
         cachedViews.setTextViewText(R.id.countText, "Count: " + buttonClickCount);
         cachedViews.setOnClickPendingIntent(R.id.customButton, cachedButtonPendingIntent);
 
+        // 앱 실행을 위한 PendingIntent 생성
+        Intent appIntent = new Intent(this, MainActivity.class);
+        appIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent appPendingIntent = PendingIntent.getActivity(this, 0, appIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
         // 알림 업데이트
         Notification notification = notificationBuilder
                 .setCustomContentView(cachedViews)
+                .setContentIntent(appPendingIntent)  // 알림 전체 영역 클릭 시 앱 실행
                 .build();
 
         new Handler(Looper.getMainLooper()).post(new Runnable() {
@@ -148,7 +155,6 @@ public class MyNotificationListenerService extends NotificationListenerService {
                 notificationManager.notify(NOTIFICATION_ID, notification);
             }
         });
-
 
         long endTime = System.nanoTime();
         Log.d(TAG, "Notification update took: " + (endTime - startTime) / 1000000.0 + "ms");
