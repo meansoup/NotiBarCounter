@@ -146,7 +146,7 @@ public class MyNotificationListenerService extends NotificationListenerService {
         long startTime = System.nanoTime();
         
         // 텍스트만 업데이트
-        cachedViews.setTextViewText(R.id.countText, "Count: " + buttonClickCount);
+        cachedViews.setTextViewText(R.id.countText, String.valueOf(buttonClickCount));
         cachedViews.setOnClickPendingIntent(R.id.upButton, upButtonPendingIntent);
         cachedViews.setOnClickPendingIntent(R.id.downButton, downButtonPendingIntent);
 

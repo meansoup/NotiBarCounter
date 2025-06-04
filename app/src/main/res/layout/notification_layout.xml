@@ -5,13 +5,29 @@
     android:orientation="horizontal"
     android:padding="8dp">
 
-    <TextView
-        android:id="@+id/countText"
+    <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:text="Count: 0"
-        android:textSize="16sp" />
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/countLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Count"
+            android:textSize="12sp"
+            android:textColor="#8C8C8C" />
+
+        <TextView
+            android:id="@+id/countText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0"
+            android:textSize="20sp"
+            android:textColor="#282828"
+            android:textStyle="bold" />
+    </LinearLayout>
 
     <Button
         android:id="@+id/downButton"
@@ -21,7 +37,7 @@
         android:minWidth="48dp"
         android:minHeight="48dp"
         android:background="?android:attr/selectableItemBackground"
-        android:textColor="#000000"
+        android:textColor="#C85050"
         android:padding="8dp" />
 
     <Button
@@ -32,7 +48,7 @@
         android:minWidth="48dp"
         android:minHeight="48dp"
         android:background="?android:attr/selectableItemBackground"
-        android:textColor="#000000"
+        android:textColor="#28A078"
         android:padding="8dp" />
 
 </LinearLayout> 
