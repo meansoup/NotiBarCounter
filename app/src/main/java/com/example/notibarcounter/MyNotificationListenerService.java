@@ -12,7 +12,7 @@ import android.widget.RemoteViews;
 import android.util.Log;
 import android.os.Handler;
 import android.os.Looper;
-import java.util.concurrent.atomic.AtomicBoolean;
+import android.graphics.Color;
 
 import androidx.core.app.NotificationCompat;
 
@@ -28,9 +28,8 @@ public class MyNotificationListenerService extends NotificationListenerService {
     private NotificationManager notificationManager;
     private Handler mainHandler;
     private Handler notificationHandler;
-    private static final long NOTIFICATION_UPDATE_DELAY = 100; // 100ms 딜레이
-    private AtomicBoolean isProcessing = new AtomicBoolean(false);
-    
+    private static final long NOTIFICATION_UPDATE_DELAY = 100;
+
     // 캐시된 객체들
     private RemoteViews cachedViews;
     private PendingIntent cachedButtonPendingIntent;
@@ -146,7 +145,7 @@ public class MyNotificationListenerService extends NotificationListenerService {
         // 알림 업데이트
         Notification notification = notificationBuilder
                 .setCustomContentView(cachedViews)
-                .setContentIntent(appPendingIntent)  // 알림 전체 영역 클릭 시 앱 실행
+                .setContentIntent(appPendingIntent)
                 .build();
 
         new Handler(Looper.getMainLooper()).post(new Runnable() {
