@@ -32,7 +32,8 @@ public class MyNotificationListenerService extends NotificationListenerService {
 
     // 캐시된 객체들
     private RemoteViews cachedViews;
-    private PendingIntent cachedButtonPendingIntent;
+    private PendingIntent upButtonPendingIntent;
+    private PendingIntent downButtonPendingIntent;
     private NotificationCompat.Builder notificationBuilder;
     private boolean isNotificationUpdatePending = false;
 
@@ -63,11 +64,16 @@ public class MyNotificationListenerService extends NotificationListenerService {
         // RemoteViews 캐시
         cachedViews = new RemoteViews(getPackageName(), R.layout.notification_layout);
         
-        // PendingIntent 캐시 - 카운트 값을 전달
-        Intent buttonIntent = new Intent(this, MyNotificationListenerService.class);
-        buttonIntent.setAction("BUTTON_CLICK");
-        buttonIntent.putExtra("current_count", buttonClickCount);
-        cachedButtonPendingIntent = PendingIntent.getService(this, 0, buttonIntent,
+        // Up 버튼 PendingIntent
+        Intent upIntent = new Intent(this, MyNotificationListenerService.class);
+        upIntent.setAction("BUTTON_UP");
+        upButtonPendingIntent = PendingIntent.getService(this, 0, upIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        
+        // Down 버튼 PendingIntent
+        Intent downIntent = new Intent(this, MyNotificationListenerService.class);
+        downIntent.setAction("BUTTON_DOWN");
+        downButtonPendingIntent = PendingIntent.getService(this, 1, downIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         
         // NotificationBuilder 캐시
@@ -95,25 +101,32 @@ public class MyNotificationListenerService extends NotificationListenerService {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent != null && "BUTTON_CLICK".equals(intent.getAction())) {
-            long startTime = System.nanoTime();
-            Log.d(TAG, "==========================================");
-            Log.d(TAG, "Button click received at: " + startTime);
-            
-            // 즉시 카운트 증가
-            buttonClickCount++;
-            Log.d(TAG, "Count updated to: " + buttonClickCount);
-            
-            // 메인 스레드에서 UI 업데이트
-            mainHandler.post(() -> {
-                updateCounter();
-                scheduleNotificationUpdate();
-                
-                long endTime = System.nanoTime();
-                Log.d(TAG, "Total processing time: " + (endTime - startTime) / 1000000.0 + "ms");
-                Log.d(TAG, "Button click ended at: " + System.nanoTime());
+        if (intent != null) {
+            String action = intent.getAction();
+            if ("BUTTON_UP".equals(action) || "BUTTON_DOWN".equals(action)) {
+                long startTime = System.nanoTime();
                 Log.d(TAG, "==========================================");
-            });
+                Log.d(TAG, "Button click received at: " + startTime);
+                
+                // 카운트 증가/감소
+                if ("BUTTON_UP".equals(action)) {
+                    buttonClickCount++;
+                } else {
+                    buttonClickCount--;
+                }
+                Log.d(TAG, "Count updated to: " + buttonClickCount);
+                
+                // 메인 스레드에서 UI 업데이트
+                mainHandler.post(() -> {
+                    updateCounter();
+                    scheduleNotificationUpdate();
+                    
+                    long endTime = System.nanoTime();
+                    Log.d(TAG, "Total processing time: " + (endTime - startTime) / 1000000.0 + "ms");
+                    Log.d(TAG, "Button click ended at: " + System.nanoTime());
+                    Log.d(TAG, "==========================================");
+                });
+            }
         }
         return START_STICKY;
     }
@@ -134,7 +147,8 @@ public class MyNotificationListenerService extends NotificationListenerService {
         
         // 텍스트만 업데이트
         cachedViews.setTextViewText(R.id.countText, "Count: " + buttonClickCount);
-        cachedViews.setOnClickPendingIntent(R.id.customButton, cachedButtonPendingIntent);
+        cachedViews.setOnClickPendingIntent(R.id.upButton, upButtonPendingIntent);
+        cachedViews.setOnClickPendingIntent(R.id.downButton, downButtonPendingIntent);
 
         // 앱 실행을 위한 PendingIntent 생성
         Intent appIntent = new Intent(this, MainActivity.class);
