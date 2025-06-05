@@ -6,16 +6,19 @@ import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Looper;
 import android.provider.Settings;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.RemoteViews;
 import android.widget.Toast;
+import android.util.Log;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -24,6 +27,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.app.NotificationCompat;
 
 public class MainActivity extends AppCompatActivity {
+    private static final String TAG = "MainActivity";
     private static final String CHANNEL_ID = "custom_notification_channel";
     private static final int NOTIFICATION_ID = 1;
     private TextView counterTextView;
@@ -32,11 +36,30 @@ public class MainActivity extends AppCompatActivity {
     private MyNotificationListenerService notificationService;
     private static final int NOTIFICATION_PERMISSION_CODE = 123;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private boolean isBound = false;
+
+    private ServiceConnection serviceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            Log.d(TAG, "Service connected");
+            MyNotificationListenerService.LocalBinder binder = (MyNotificationListenerService.LocalBinder) service;
+            notificationService = binder.getService();
+            setNotificationService(notificationService);
+            isBound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            Log.d(TAG, "Service disconnected");
+            notificationService = null;
+            isBound = false;
+        }
+    };
 
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
                 if (isGranted) {
-                    startService();
+                    startAndBindService();
                 } else {
                     Toast.makeText(this, "알림 권한이 필요합니다", Toast.LENGTH_SHORT).show();
                 }
@@ -60,11 +83,19 @@ public class MainActivity extends AppCompatActivity {
 
         showNotificationButton.setOnClickListener(v -> {
             if (checkNotificationPermission()) {
-                showCustomNotification();
+                if (notificationService != null) {
+                    notificationService.showCounterNotification();
+                    Log.d(TAG, "Showing counter notification");
+                } else {
+                    Log.e(TAG, "Notification service is null");
+                    startAndBindService();
+                }
             }
         });
 
         updatePermissionButton();
+        startAndBindService();
+        updateCounter();
     }
 
     @Override
@@ -72,9 +103,17 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         updatePermissionButton();
         if (!isServiceRunning(MyNotificationListenerService.class)) {
-            startService();
-        } else if (notificationService != null) {
-            updateCounter(notificationService.getCurrentCount());
+            startAndBindService();
+        }
+        updateCounter();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (isBound) {
+            unbindService(serviceConnection);
+            isBound = false;
         }
     }
 
@@ -86,35 +125,18 @@ public class MainActivity extends AppCompatActivity {
                 NotificationManager.IMPORTANCE_HIGH
             );
             channel.setShowBadge(true);
+            channel.setLockscreenVisibility(NotificationCompat.VISIBILITY_PUBLIC);
             NotificationManager manager = getSystemService(NotificationManager.class);
             manager.createNotificationChannel(channel);
+            Log.d(TAG, "Notification channel created");
         }
-    }
-
-    private void showCustomNotification() {
-        RemoteViews remoteViews = new RemoteViews(getPackageName(), R.layout.notification_layout);
-        
-        Intent intent = new Intent(this, MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, 
-            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("카운터 알림")
-            .setContentText("버튼을 눌러 카운트를 증가시키세요")
-            .setCustomContentView(remoteViews)
-            .setAutoCancel(false)
-            .setOngoing(true)
-            .setContentIntent(pendingIntent);
-
-        NotificationManager manager = getSystemService(NotificationManager.class);
-        manager.notify(NOTIFICATION_ID, builder.build());
     }
 
     private void updatePermissionButton() {
         boolean isEnabled = isNotificationListenerEnabled();
         permissionButton.setText(isEnabled ? "권한 해제" : "권한 설정");
         permissionButton.setEnabled(true);
+        Log.d(TAG, "Permission status: " + isEnabled);
     }
 
     private boolean isNotificationListenerEnabled() {
@@ -127,15 +149,23 @@ public class MainActivity extends AppCompatActivity {
         return false;
     }
 
-    public void updateCounter(int count) {
-        counterTextView.setText("버튼 클릭 카운트: " + count);
+    public void updateCounter() {
+        Log.d(TAG, "updateCounter called with count: " + MyNotificationListenerService.buttonClickCount);
+        mainHandler.post(() -> {
+            counterTextView.setText("버튼 클릭 카운트: " + MyNotificationListenerService.buttonClickCount);
+            Log.d(TAG, "Counter text updated to: " + MyNotificationListenerService.buttonClickCount);
+        });
     }
 
     public void setNotificationService(MyNotificationListenerService service) {
+        Log.d(TAG, "setNotificationService called with service: " + (service != null));
         this.notificationService = service;
         if (service != null) {
             service.setMainActivity(this);
-            updateCounter(service.getCurrentCount());
+            updateCounter();
+            Log.d(TAG, "Notification service set, current count: " + MyNotificationListenerService.buttonClickCount);
+        } else {
+            Log.e(TAG, "Setting null notification service");
         }
     }
 
@@ -150,7 +180,7 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    private void startService() {
+    private void startAndBindService() {
         if (!isNotificationListenerEnabled()) {
             Toast.makeText(this, "알림 접근 권한을 허용해주세요", Toast.LENGTH_LONG).show();
             Intent intent = new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
@@ -164,10 +194,14 @@ public class MainActivity extends AppCompatActivity {
         } else {
             startService(serviceIntent);
         }
+        bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
+        Log.d(TAG, "Started and bound notification service");
     }
 
     private boolean isServiceRunning(Class<?> serviceClass) {
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        return manager != null && manager.getActiveNotifications().length > 0;
+        boolean isRunning = manager != null && manager.getActiveNotifications().length > 0;
+        Log.d(TAG, "Service running check: " + isRunning);
+        return isRunning;
     }
 } 

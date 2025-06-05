@@ -5,7 +5,9 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.os.Binder;
 import android.os.Build;
+import android.os.IBinder;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 import android.widget.RemoteViews;
@@ -16,11 +18,9 @@ import android.graphics.Color;
 
 import androidx.core.app.NotificationCompat;
 
-import com.example.notibarcounter.MainActivity;
-
 public class MyNotificationListenerService extends NotificationListenerService {
     private static final String TAG = "NOTI_TIMING";
-    private int buttonClickCount = 0;
+    public static int buttonClickCount = 0;  // static으로 변경
     private MainActivity mainActivity;
     private static final String CHANNEL_ID = "counter_channel";
     private static final int NOTIFICATION_ID = 1;
@@ -29,6 +29,7 @@ public class MyNotificationListenerService extends NotificationListenerService {
     private Handler mainHandler;
     private Handler notificationHandler;
     private static final long NOTIFICATION_UPDATE_DELAY = 100;
+    private final IBinder binder = new LocalBinder();
 
     // 캐시된 객체들
     private RemoteViews cachedViews;
@@ -36,6 +37,18 @@ public class MyNotificationListenerService extends NotificationListenerService {
     private PendingIntent downButtonPendingIntent;
     private NotificationCompat.Builder notificationBuilder;
     private boolean isNotificationUpdatePending = false;
+
+    public class LocalBinder extends Binder {
+        MyNotificationListenerService getService() {
+            return MyNotificationListenerService.this;
+        }
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        Log.d(TAG, "Service bound");
+        return binder;
+    }
 
     @Override
     public void onCreate() {
@@ -46,6 +59,7 @@ public class MyNotificationListenerService extends NotificationListenerService {
         createNotificationChannel();
         initializeCachedObjects();
         startForeground();
+        Log.d(TAG, "Service created, initial count: " + buttonClickCount);
     }
 
     private void createNotificationChannel() {
@@ -56,7 +70,12 @@ public class MyNotificationListenerService extends NotificationListenerService {
                 NotificationManager.IMPORTANCE_HIGH
             );
             channel.setShowBadge(true);
+            channel.setLockscreenVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+            channel.enableLights(true);
+            channel.setLightColor(Color.RED);
+            channel.enableVibration(true);
             notificationManager.createNotificationChannel(channel);
+            Log.d(TAG, "Notification channel created");
         }
     }
 
@@ -80,7 +99,11 @@ public class MyNotificationListenerService extends NotificationListenerService {
         notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setAutoCancel(false)
-                .setOngoing(true);
+                .setOngoing(true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+        
+        Log.d(TAG, "Cached objects initialized");
     }
 
     private void startForeground() {
@@ -93,10 +116,12 @@ public class MyNotificationListenerService extends NotificationListenerService {
                 .setContentText("Service is running")
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentIntent(pendingIntent)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .build();
 
         startForeground(FOREGROUND_NOTIFICATION_ID, notification);
         showCounterNotification();
+        Log.d(TAG, "Service started in foreground");
     }
 
     @Override
@@ -105,7 +130,6 @@ public class MyNotificationListenerService extends NotificationListenerService {
             String action = intent.getAction();
             if ("BUTTON_UP".equals(action) || "BUTTON_DOWN".equals(action)) {
                 long startTime = System.nanoTime();
-                Log.d(TAG, "==========================================");
                 Log.d(TAG, "Button click received at: " + startTime);
                 
                 // 카운트 증가/감소
@@ -124,7 +148,6 @@ public class MyNotificationListenerService extends NotificationListenerService {
                     long endTime = System.nanoTime();
                     Log.d(TAG, "Total processing time: " + (endTime - startTime) / 1000000.0 + "ms");
                     Log.d(TAG, "Button click ended at: " + System.nanoTime());
-                    Log.d(TAG, "==========================================");
                 });
             }
         }
@@ -142,8 +165,9 @@ public class MyNotificationListenerService extends NotificationListenerService {
         }
     }
 
-    private void showCounterNotification() {
+    public void showCounterNotification() {
         long startTime = System.nanoTime();
+        Log.d(TAG, "Showing counter notification, count: " + buttonClickCount);
         
         // 텍스트만 업데이트
         cachedViews.setTextViewText(R.id.countText, String.valueOf(buttonClickCount));
@@ -162,30 +186,43 @@ public class MyNotificationListenerService extends NotificationListenerService {
                 .setContentIntent(appPendingIntent)
                 .build();
 
-        new Handler(Looper.getMainLooper()).post(new Runnable() {
-            @Override
-            public void run() {
-                notificationManager.notify(NOTIFICATION_ID, notification);
-            }
-        });
+        try {
+            notificationManager.notify(NOTIFICATION_ID, notification);
+            Log.d(TAG, "Notification updated successfully");
+        } catch (Exception e) {
+            Log.e(TAG, "Error updating notification: " + e.getMessage());
+            e.printStackTrace();
+        }
 
         long endTime = System.nanoTime();
         Log.d(TAG, "Notification update took: " + (endTime - startTime) / 1000000.0 + "ms");
     }
 
     private void updateCounter() {
+        Log.d(TAG, "updateCounter called, count: " + buttonClickCount);
         if (mainActivity != null) {
-            mainActivity.updateCounter(buttonClickCount);
+            mainActivity.updateCounter();
+            Log.d(TAG, "Counter updated in MainActivity: " + buttonClickCount);
+        } else {
+            Log.e(TAG, "MainActivity is null, cannot update counter");
         }
     }
 
     public void setMainActivity(MainActivity activity) {
+        Log.d(TAG, "setMainActivity called with activity: " + (activity != null));
         this.mainActivity = activity;
-        updateCounter();
-        showCounterNotification();
+        if (activity != null) {
+            updateCounter();
+            showCounterNotification();
+            Log.d(TAG, "MainActivity set and counter updated");
+        } else {
+            Log.e(TAG, "Setting null MainActivity");
+        }
     }
 
-    public int getCurrentCount() {
-        return buttonClickCount;
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        Log.d(TAG, "Service destroyed");
     }
 } 
