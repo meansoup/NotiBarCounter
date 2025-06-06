@@ -142,7 +142,7 @@ public class MyNotificationListenerService extends NotificationListenerService {
                 
                 // 메인 스레드에서 UI 업데이트
                 mainHandler.post(() -> {
-                    updateCounter();
+                    updateCounterInActivity();
                     scheduleNotificationUpdate();
                     
                     long endTime = System.nanoTime();
@@ -198,13 +198,13 @@ public class MyNotificationListenerService extends NotificationListenerService {
         Log.d(TAG, "Notification update took: " + (endTime - startTime) / 1000000.0 + "ms");
     }
 
-    private void updateCounter() {
-        Log.d(TAG, "updateCounter called, count: " + buttonClickCount);
+    private void updateCounterInActivity() {
+        Log.d(TAG, "updateCounterInActivity called, count: " + buttonClickCount);
         if (mainActivity != null) {
             mainActivity.updateCounter();
             Log.d(TAG, "Counter updated in MainActivity: " + buttonClickCount);
         } else {
-            Log.e(TAG, "MainActivity is null, cannot update counter");
+            Log.e(TAG, "MainActivity is null, cannot update counter in activity");
         }
     }
 
@@ -212,7 +212,7 @@ public class MyNotificationListenerService extends NotificationListenerService {
         Log.d(TAG, "setMainActivity called with activity: " + (activity != null));
         this.mainActivity = activity;
         if (activity != null) {
-            updateCounter();
+            updateCounterInActivity();
             showCounterNotification();
             Log.d(TAG, "MainActivity set and counter updated");
         } else {

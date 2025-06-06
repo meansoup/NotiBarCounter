@@ -31,8 +31,9 @@ public class MainActivity extends AppCompatActivity {
     private static final String CHANNEL_ID = "custom_notification_channel";
     private static final int NOTIFICATION_ID = 1;
     private TextView counterTextView;
-    private Button permissionButton;
     private Button showNotificationButton;
+    private Button upButton;
+    private Button downButton;
     private MyNotificationListenerService notificationService;
     private static final int NOTIFICATION_PERMISSION_CODE = 123;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -46,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
             notificationService = binder.getService();
             setNotificationService(notificationService);
             isBound = true;
+            updateCounter();
         }
 
         @Override
@@ -71,15 +73,11 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         counterTextView = findViewById(R.id.counterTextView);
-        permissionButton = findViewById(R.id.permissionButton);
         showNotificationButton = findViewById(R.id.showNotificationButton);
+        upButton = findViewById(R.id.upButton);
+        downButton = findViewById(R.id.downButton);
 
         createNotificationChannel();
-
-        permissionButton.setOnClickListener(v -> {
-            Intent intent = new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
-            startActivity(intent);
-        });
 
         showNotificationButton.setOnClickListener(v -> {
             if (checkNotificationPermission()) {
@@ -87,13 +85,36 @@ public class MainActivity extends AppCompatActivity {
                     notificationService.showCounterNotification();
                     Log.d(TAG, "Showing counter notification");
                 } else {
-                    Log.e(TAG, "Notification service is null");
+                    Log.e(TAG, "Notification service is null, starting and binding");
                     startAndBindService();
                 }
             }
         });
 
-        updatePermissionButton();
+        upButton.setOnClickListener(v -> {
+            Log.d(TAG, "Up button clicked in MainActivity");
+            if (notificationService != null) {
+                Intent intent = new Intent(this, MyNotificationListenerService.class);
+                intent.setAction("BUTTON_UP");
+                startService(intent);
+            } else {
+                Log.e(TAG, "Notification service is null, cannot increment counter");
+                startAndBindService();
+            }
+        });
+
+        downButton.setOnClickListener(v -> {
+            Log.d(TAG, "Down button clicked in MainActivity");
+            if (notificationService != null) {
+                Intent intent = new Intent(this, MyNotificationListenerService.class);
+                intent.setAction("BUTTON_DOWN");
+                startService(intent);
+            } else {
+                Log.e(TAG, "Notification service is null, cannot decrement counter");
+                startAndBindService();
+            }
+        });
+
         startAndBindService();
         updateCounter();
     }
@@ -101,8 +122,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        updatePermissionButton();
-        if (!isServiceRunning(MyNotificationListenerService.class)) {
+        if (!isBound && isNotificationListenerEnabled()) {
             startAndBindService();
         }
         updateCounter();
@@ -114,6 +134,7 @@ public class MainActivity extends AppCompatActivity {
         if (isBound) {
             unbindService(serviceConnection);
             isBound = false;
+            Log.d(TAG, "Service unbound");
         }
     }
 
@@ -132,13 +153,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void updatePermissionButton() {
-        boolean isEnabled = isNotificationListenerEnabled();
-        permissionButton.setText(isEnabled ? "권한 해제" : "권한 설정");
-        permissionButton.setEnabled(true);
-        Log.d(TAG, "Permission status: " + isEnabled);
-    }
-
     private boolean isNotificationListenerEnabled() {
         String pkgName = getPackageName();
         final String flat = Settings.Secure.getString(getContentResolver(),
@@ -150,10 +164,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void updateCounter() {
-        Log.d(TAG, "updateCounter called with count: " + MyNotificationListenerService.buttonClickCount);
+        final int currentCount = MyNotificationListenerService.buttonClickCount;
+        Log.d(TAG, "updateCounter called with count: " + currentCount);
         mainHandler.post(() -> {
-            counterTextView.setText("버튼 클릭 카운트: " + MyNotificationListenerService.buttonClickCount);
-            Log.d(TAG, "Counter text updated to: " + MyNotificationListenerService.buttonClickCount);
+            counterTextView.setText(String.valueOf(currentCount));
+            Log.d(TAG, "Counter text updated to: " + currentCount);
         });
     }
 
@@ -181,27 +196,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startAndBindService() {
-        if (!isNotificationListenerEnabled()) {
-            Toast.makeText(this, "알림 접근 권한을 허용해주세요", Toast.LENGTH_LONG).show();
-            Intent intent = new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
-            startActivity(intent);
-            return;
-        }
-
         Intent serviceIntent = new Intent(this, MyNotificationListenerService.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(serviceIntent);
         } else {
             startService(serviceIntent);
         }
-        bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
-        Log.d(TAG, "Started and bound notification service");
+        if (!isBound) {
+            bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
+            Log.d(TAG, "Attempting to bind service");
+        }
+        Log.d(TAG, "Started notification service");
     }
-
-    private boolean isServiceRunning(Class<?> serviceClass) {
-        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        boolean isRunning = manager != null && manager.getActiveNotifications().length > 0;
-        Log.d(TAG, "Service running check: " + isRunning);
-        return isRunning;
-    }
-} 
+}
