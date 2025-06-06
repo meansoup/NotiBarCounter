@@ -23,6 +23,8 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".HistoryActivity"/>
+
         <service
             android:name=".MyNotificationListenerService"
             android:label="@string/app_name"

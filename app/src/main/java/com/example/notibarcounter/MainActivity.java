@@ -19,12 +19,22 @@ import android.widget.TextView;
 import android.widget.RemoteViews;
 import android.widget.Toast;
 import android.util.Log;
+import android.view.View;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.app.NotificationCompat;
+
+import com.google.android.material.card.MaterialCardView;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
@@ -34,10 +44,16 @@ public class MainActivity extends AppCompatActivity {
     private Button showNotificationButton;
     private Button upButton;
     private Button downButton;
+    private Button resetButton;
+    private MaterialCardView counterCardView;
     private MyNotificationListenerService notificationService;
     private static final int NOTIFICATION_PERMISSION_CODE = 123;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private boolean isBound = false;
+
+    private List<NotificationHistoryItem> historyList;
+    private static final String PREFS_NAME = "NotificationPrefs";
+    private static final String HISTORY_KEY = "historyList";
 
     private ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
@@ -47,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
             notificationService = binder.getService();
             setNotificationService(notificationService);
             isBound = true;
-            updateCounter();
+            updateCounter(); // Update counter when service is connected
         }
 
         @Override
@@ -76,8 +92,11 @@ public class MainActivity extends AppCompatActivity {
         showNotificationButton = findViewById(R.id.showNotificationButton);
         upButton = findViewById(R.id.upButton);
         downButton = findViewById(R.id.downButton);
+        resetButton = findViewById(R.id.resetButton);
+        counterCardView = findViewById(R.id.counterCardView);
 
         createNotificationChannel();
+        loadHistory();
 
         showNotificationButton.setOnClickListener(v -> {
             if (checkNotificationPermission()) {
@@ -94,9 +113,9 @@ public class MainActivity extends AppCompatActivity {
         upButton.setOnClickListener(v -> {
             Log.d(TAG, "Up button clicked in MainActivity");
             if (notificationService != null) {
-                Intent intent = new Intent(this, MyNotificationListenerService.class);
-                intent.setAction("BUTTON_UP");
-                startService(intent);
+                 Intent intent = new Intent(this, MyNotificationListenerService.class);
+                 intent.setAction("BUTTON_UP");
+                 startService(intent);
             } else {
                 Log.e(TAG, "Notification service is null, cannot increment counter");
                 startAndBindService();
@@ -110,22 +129,78 @@ public class MainActivity extends AppCompatActivity {
                 intent.setAction("BUTTON_DOWN");
                 startService(intent);
             } else {
-                Log.e(TAG, "Notification service is null, cannot decrement counter");
-                startAndBindService();
+                 Log.e(TAG, "Notification service is null, cannot decrement counter");
+                 startAndBindService();
             }
         });
 
+        resetButton.setOnClickListener(v -> {
+            Log.d(TAG, "Reset button clicked");
+            saveCurrentCountToHistory();
+            resetCounter();
+        });
+
+        counterCardView.setOnClickListener(v -> {
+            Log.d(TAG, "Card view clicked, showing history");
+            Intent historyIntent = new Intent(MainActivity.this, HistoryActivity.class);
+            // History data will be loaded in HistoryActivity from SharedPreferences
+            startActivity(historyIntent);
+        });
+
+
         startAndBindService();
-        updateCounter();
+        updateCounter(); // Initial update
+    }
+
+    private void saveCurrentCountToHistory() {
+        int currentCount = MyNotificationListenerService.buttonClickCount;
+        long currentTime = System.currentTimeMillis();
+        NotificationHistoryItem historyItem = new NotificationHistoryItem(currentTime, currentCount);
+        historyList.add(historyItem);
+        saveHistory();
+        Log.d(TAG, "Saved history item: count=" + currentCount + ", time=" + new Date(currentTime).toString());
+    }
+
+    private void resetCounter() {
+        MyNotificationListenerService.buttonClickCount = 0;
+        updateCounter(); // Update MainActivity UI
+        if (notificationService != null) {
+            notificationService.showCounterNotification(); // Update Notification UI
+        } else {
+             Log.e(TAG, "Notification service is null, cannot update notification after reset");
+        }
+        Log.d(TAG, "Counter reset to 0");
+    }
+
+    private void saveHistory() {
+        Gson gson = new Gson();
+        String json = gson.toJson(historyList);
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .edit()
+                .putString(HISTORY_KEY, json)
+                .apply();
+        Log.d(TAG, "History saved to SharedPreferences");
+    }
+
+    private void loadHistory() {
+        Gson gson = new Gson();
+        String json = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .getString(HISTORY_KEY, null);
+        Type type = new TypeToken<ArrayList<NotificationHistoryItem>>() {}.getType();
+        historyList = gson.fromJson(json, type);
+        if (historyList == null) {
+            historyList = new ArrayList<>();
+        }
+        Log.d(TAG, "History loaded from SharedPreferences, items: " + historyList.size());
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (!isBound && isNotificationListenerEnabled()) {
-            startAndBindService();
+        if (!isBound && isNotificationListenerEnabled()) { // Check if service is running and not bound
+             startAndBindService();
         }
-        updateCounter();
+        updateCounter(); // Update counter on resume
     }
 
     @Override
@@ -164,9 +239,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void updateCounter() {
+        // Access the static counter directly from the service
         final int currentCount = MyNotificationListenerService.buttonClickCount;
         Log.d(TAG, "updateCounter called with count: " + currentCount);
         mainHandler.post(() -> {
+            // Use the simple count display as per the previous request, without the label
             counterTextView.setText(String.valueOf(currentCount));
             Log.d(TAG, "Counter text updated to: " + currentCount);
         });
@@ -176,8 +253,8 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "setNotificationService called with service: " + (service != null));
         this.notificationService = service;
         if (service != null) {
-            service.setMainActivity(this);
-            updateCounter();
+            service.setMainActivity(this); // Keep this if service still needs MainActivity reference
+            updateCounter(); // Update counter when service is set
             Log.d(TAG, "Notification service set, current count: " + MyNotificationListenerService.buttonClickCount);
         } else {
             Log.e(TAG, "Setting null notification service");
@@ -196,16 +273,25 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startAndBindService() {
+        // Permission check is done before calling this method
+
         Intent serviceIntent = new Intent(this, MyNotificationListenerService.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(serviceIntent);
         } else {
             startService(serviceIntent);
         }
+        // Only bind if not already bound
         if (!isBound) {
-            bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
-            Log.d(TAG, "Attempting to bind service");
+             bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
+             Log.d(TAG, "Attempting to bind service");
         }
         Log.d(TAG, "Started notification service");
+    }
+
+    private boolean isServiceRunning(Class<?> serviceClass) {
+        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        boolean hasActiveNotifications = manager != null && manager.getActiveNotifications().length > 0;
+        return false; // Returning false to always attempt binding if not bound
     }
 }
