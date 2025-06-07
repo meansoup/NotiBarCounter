@@ -38,7 +38,7 @@ public class HistoryActivity extends AppCompatActivity {
         // Optional: Add a back button to the action bar
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle("리셋 기록");
+            getSupportActionBar().setTitle("Count History");
         }
     }
 
