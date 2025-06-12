@@ -97,7 +97,7 @@ public class MyNotificationListenerService extends NotificationListenerService {
         
         // NotificationBuilder 캐시
         notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_notification)
+                .setSmallIcon(R.drawable.ic_noti)
                 .setAutoCancel(false)
                 .setOngoing(true)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -114,7 +114,7 @@ public class MyNotificationListenerService extends NotificationListenerService {
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("Counter Service")
                 .setContentText("Service is running")
-                .setSmallIcon(R.drawable.ic_notification)
+                .setSmallIcon(R.drawable.ic_noti)
                 .setContentIntent(pendingIntent)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .build();
