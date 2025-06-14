@@ -33,6 +33,7 @@ captures/
 
 # Keystore files
 *.jks
+*/key.properties
 *.keystore
 
 # Google Services (e.g. APIs or Firebase)
