@@ -1,4 +1,4 @@
-package com.example.notibarcounter;
+package com.meansoup.notibarcounter;
 
 import android.view.LayoutInflater;
 import android.view.View;

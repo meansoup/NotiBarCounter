@@ -9,13 +9,13 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    compileSdkVersion 33
+    compileSdkVersion 34
     
     defaultConfig {
-        applicationId "com.example.notibarcounter"
+        applicationId "com.meansoup.notibarcounter"
         minSdkVersion 24
-        targetSdkVersion 33
-        versionCode 1
+        targetSdkVersion 34
+        versionCode 2
         versionName "1.0"
     }
 

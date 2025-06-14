@@ -1,4 +1,4 @@
-package com.example.notibarcounter;
+package com.meansoup.notibarcounter;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;

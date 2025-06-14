@@ -1,4 +1,4 @@
-package com.example.notibarcounter;
+package com.meansoup.notibarcounter;
 
 public class NotificationHistoryItem {
     private long timestamp;

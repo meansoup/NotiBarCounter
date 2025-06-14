@@ -1,4 +1,4 @@
-package com.example.notibarcounter;
+package com.meansoup.notibarcounter;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -9,7 +9,6 @@ import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
 import android.service.notification.NotificationListenerService;
-import android.service.notification.StatusBarNotification;
 import android.widget.RemoteViews;
 import android.util.Log;
 import android.os.Handler;

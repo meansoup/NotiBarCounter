@@ -1,8 +1,7 @@
-package com.example.notibarcounter;
+package com.meansoup.notibarcounter;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -16,10 +15,8 @@ import android.os.Looper;
 import android.provider.Settings;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.RemoteViews;
 import android.widget.Toast;
 import android.util.Log;
-import android.view.View;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
