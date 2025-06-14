@@ -273,11 +273,7 @@ public class MainActivity extends AppCompatActivity {
         // Permission check is done before calling this method
 
         Intent serviceIntent = new Intent(this, MyNotificationListenerService.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent);
-        } else {
-            startService(serviceIntent);
-        }
+        startForegroundService(serviceIntent);
         // Only bind if not already bound
         if (!isBound) {
              bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);

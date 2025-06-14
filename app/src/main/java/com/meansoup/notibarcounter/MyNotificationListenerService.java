@@ -62,20 +62,18 @@ public class MyNotificationListenerService extends NotificationListenerService {
     }
 
     private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                CHANNEL_ID,
-                "Counter Channel",
-                NotificationManager.IMPORTANCE_HIGH
-            );
-            channel.setShowBadge(true);
-            channel.setLockscreenVisibility(NotificationCompat.VISIBILITY_PUBLIC);
-            channel.enableLights(true);
-            channel.setLightColor(Color.RED);
-            channel.enableVibration(true);
-            notificationManager.createNotificationChannel(channel);
-            Log.d(TAG, "Notification channel created");
-        }
+        NotificationChannel channel = new NotificationChannel(
+            CHANNEL_ID,
+            "Counter Channel",
+            NotificationManager.IMPORTANCE_HIGH
+        );
+        channel.setShowBadge(true);
+        channel.setLockscreenVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+        channel.enableLights(true);
+        channel.setLightColor(Color.RED);
+        channel.enableVibration(true);
+        notificationManager.createNotificationChannel(channel);
+        Log.d(TAG, "Notification channel created");
     }
 
     private void initializeCachedObjects() {
