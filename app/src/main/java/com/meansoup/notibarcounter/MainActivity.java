@@ -27,6 +27,9 @@ import androidx.core.app.NotificationCompat;
 import com.google.android.material.card.MaterialCardView;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.MobileAds;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -94,6 +97,14 @@ public class MainActivity extends AppCompatActivity {
 
         createNotificationChannel();
         loadHistory();
+
+        // AdMob 초기화 및 광고 로드
+        MobileAds.initialize(this, initializationStatus -> {});
+        AdView adViewTop = findViewById(R.id.adViewTop);
+        AdView adViewBottom = findViewById(R.id.adViewBottom);
+        AdRequest adRequest = new AdRequest.Builder().build();
+        adViewTop.loadAd(adRequest);
+        adViewBottom.loadAd(adRequest);
 
         showNotificationButton.setOnClickListener(v -> {
             if (checkNotificationPermission()) {

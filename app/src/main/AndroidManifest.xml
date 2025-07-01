@@ -16,6 +16,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.QuickCount">
 
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-2432479090372596~7338522203"/>
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
