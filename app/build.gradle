@@ -14,7 +14,7 @@ android {
     defaultConfig {
         applicationId "com.meansoup.notibarcounter"
         minSdkVersion 34
-        targetSdkVersion 34
+        targetSdkVersion 35
         versionCode 7
         versionName "1.0"
     }
